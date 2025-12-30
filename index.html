@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>Scanner Pro</title>
+    <title>Scanner</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -13,7 +13,6 @@
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" type="image/png" href="icon-512.png">
     <link rel="manifest" href="manifest.json">
-    
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -33,19 +32,6 @@
         #reader { width: 100%; border-radius: 0.75rem; overflow: hidden; background-color: #000; position: relative; }
         #reader video { object-fit: cover; width: 100% !important; height: 100% !important; border-radius: 0.75rem; }
         
-        .scan-region-highlight {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 250px; height: 250px;
-            border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 20px;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); z-index: 10; pointer-events: none;
-        }
-        .scan-region-highlight::after {
-            content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px;
-            border: 4px solid #3b82f6; border-radius: 20px;
-            clip-path: polygon(0% 20%, 0% 0%, 20% 0%, 100% 0%, 100% 20%, 100% 100%, 80% 100%, 100% 100%, 100% 80%, 0% 100%, 20% 100%, 0% 100%, 0% 80%);
-            animation: pulse-border 2s infinite;
-        }
-        @keyframes pulse-border { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -116,10 +102,10 @@
                         </div>
                     </div>
                     <div class="px-5 pb-5 pt-2 flex gap-3">
-                        <button id="torch-btn" onclick="toggleTorch()" class="hidden w-16 bg-slate-800 hover:bg-slate-700 text-yellow-400 font-bold py-3 px-3 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center">
+                        <button id="torch-btn" type="button" onclick="toggleTorch()" class="hidden w-16 bg-slate-800 hover:bg-slate-700 text-yellow-400 font-bold py-3 px-3 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center border border-slate-700">
                             <span id="torch-icon" class="material-symbols-rounded">flash_on</span>
                         </button>
-                        <button id="stop-camera-btn" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <button id="stop-camera-btn" type="button" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
                             <span class="material-symbols-rounded icon-sm">videocam_off</span> ปิดกล้อง
                         </button>
                     </div>
@@ -235,10 +221,10 @@
         // =========================================================================
         // ⚠️ ใส่ URL Google Apps Script ที่นี่ ⚠️
         // =========================================================================
-        const API_URL = "https://script.google.com/macros/s/AKfycbxMswJGCHo_m4S1SDSdyYysHt8gOUYwxsyX1g_5trbEMJ-kFGDOHsfWDY2tWOwEwwUR4A/exec"; 
+        const API_URL = "https://script.google.com/macros/s/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/exec"; 
         
         let savedConfigs = []; let activeId = ""; let savedAppUrl = ""; let isProcessing = false; let html5QrCode = null;
-        let isTorchOn = false; // สถานะไฟฉาย
+        let isTorchOn = false; 
 
         const inputField = document.getElementById('manual-input'); const saveBtn = document.getElementById('save-btn'); const historyList = document.getElementById('history-list');
 
@@ -350,7 +336,7 @@
         
         function playBeep() { const a = document.getElementById('beep-sound'); if(a){ a.currentTime=0; a.play().catch(()=>{}); } }
         
-        // --- Camera & Torch Logic ---
+        // --- Camera & Torch Logic (Updated) ---
         document.getElementById('start-camera-btn').addEventListener('click', () => {
             const triggerDiv = document.getElementById('camera-trigger');
             const containerDiv = document.getElementById('camera-container');
@@ -364,23 +350,8 @@
                 (txt) => { if(!isProcessing) { playBeep(); inputField.value = txt; handleSave(txt); } }, 
                 (err) => {}
             ).then(() => {
-                // เช็คว่าเครื่องรองรับไฟฉายหรือไม่
-                try {
-                    const track = html5QrCode.getRunningTrackCameraCapabilities();
-                    // ถ้ามี torchFeature ให้โชว์ปุ่ม
-                    if (track && track.torchFeature && track.torchFeature.isSupported()) {
-                       document.getElementById('torch-btn').classList.remove('hidden');
-                    } else {
-                       // กรณี library version เก่า อาจต้องเช็คอีกแบบ (แต่ html5-qrcode ล่าสุดใช้แบบนี้)
-                       // หรือลองเสี่ยงดวงแสดงปุ่มไว้ ถ้ากดแล้ว error ค่อยซ่อน
-                       // แต่เพื่อความชัวร์ ซ่อนไว้เป็น default ดีแล้ว
-                    }
-                    // หมายเหตุ: บาง browser บน Android อาจไม่ return capability แต่สั่งเปิดได้
-                    // ดังนั้นเราจะลอง "แสดงปุ่ม" ไว้ก่อนสำหรับ Android แล้วถ้ากดไม่ได้ค่อยซ่อน
-                    if(/android/i.test(navigator.userAgent)) {
-                        document.getElementById('torch-btn').classList.remove('hidden');
-                    }
-                } catch(e) { console.log("Torch capability check failed"); }
+                // 💡 UPDATED: บังคับโชว์ปุ่มไฟฉายเลย (ไม่ต้องเช็ค capabilities เพราะบางเครื่องบั๊ก)
+                document.getElementById('torch-btn').classList.remove('hidden');
             })
             .catch(err => { console.error(err); Swal.fire('Camera Error', 'ไม่สามารถเปิดกล้องได้', 'error'); resetCam(); });
         });
@@ -406,8 +377,7 @@
                      }
                  } catch(err) {
                      isTorchOn = !isTorchOn; // กลับค่าเดิม
-                     Swal.fire({ title: 'ไม่รองรับ', text: 'อุปกรณ์หรือ Browser นี้ไม่รองรับการสั่งเปิดไฟฉาย', icon: 'warning', timer: 2000, showConfirmButton: false });
-                     document.getElementById('torch-btn').classList.add('hidden'); // ซ่อนปุ่มถาวร
+                     Swal.fire({ title: 'เปิดไฟไม่ได้', text: 'อุปกรณ์นี้หรือเบราว์เซอร์นี้ไม่รองรับการสั่งเปิดไฟฉาย (iPhone ใช้ไม่ได้)', icon: 'warning', timer: 3000, showConfirmButton: false });
                  }
              }
         }
@@ -417,7 +387,8 @@
             document.getElementById('camera-container').classList.add('hidden'); 
             document.getElementById('camera-trigger').classList.remove('hidden'); 
             document.getElementById('torch-btn').classList.add('hidden'); // ซ่อนปุ่มไฟเมื่อปิดกล้อง
-            isTorchOn = false; // รีเซ็ตค่าไฟ
+            isTorchOn = false; 
+            
             // รีเซ็ตสีปุ่ม
             const icon = document.getElementById('torch-icon');
             icon.innerText = "flash_on";

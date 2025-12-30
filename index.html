@@ -32,6 +32,7 @@
     <script src="./JsBarcode.all.min.js"></script>
 
     <style>
+      
         body { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
         .material-symbols-rounded { font-size: 24px; vertical-align: middle; }
         .icon-sm { font-size: 18px; }
@@ -40,20 +41,8 @@
         /* Camera Styles */
         #reader { width: 100%; border-radius: 0.75rem; overflow: hidden; background-color: #000; position: relative; }
         #reader video { object-fit: cover; width: 100% !important; height: 100% !important; border-radius: 0.75rem; }
+        .mirror-mode video { transform: scaleX(-1); }
         
-        .scan-region-highlight {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 250px; height: 250px;
-            border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 20px;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); z-index: 10; pointer-events: none;
-        }
-        .scan-region-highlight::after {
-            content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px;
-            border: 4px solid #3b82f6; border-radius: 20px;
-            clip-path: polygon(0% 20%, 0% 0%, 20% 0%, 100% 0%, 100% 20%, 100% 100%, 80% 100%, 100% 100%, 100% 80%, 0% 100%, 20% 100%, 0% 100%, 0% 80%);
-            animation: pulse-border 2s infinite;
-        }
-        @keyframes pulse-border { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -69,7 +58,7 @@
                     <div>
                         <h1 class="text-2xl font-bold text-slate-800 leading-none">Scanner Pro</h1>
                         <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 w-fit mt-1">
-                            <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Online
+                            <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Online Mode
                         </span>
                     </div>
                 </div>
@@ -109,7 +98,7 @@
                             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                                 <span class="material-symbols-rounded icon-sm">keyboard</span>
                             </span>
-                            <input type="text" id="manual-input" autocomplete="off" class="w-full rounded-xl border-slate-200 border-2 pl-10 pr-4 py-3 focus:border-blue-500 focus:outline-none text-base appearance-none transition-colors bg-slate-50 focus:bg-white" placeholder="พิมพ์รหัส...">
+                            <input type="text" id="manual-input" autocomplete="off" class="w-full rounded-xl border-slate-200 border-2 pl-10 pr-4 py-3 focus:border-blue-500 focus:outline-none text-base appearance-none transition-colors bg-slate-50 focus:bg-white" placeholder="พิมพ์รหัสสินค้า...">
                         </div>
                         <button type="submit" id="save-btn" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-5 rounded-xl shadow-md transition-all active:scale-95 whitespace-nowrap flex items-center gap-2">
                             <span class="material-symbols-rounded icon-sm">save</span> บันทึก
@@ -124,11 +113,14 @@
                         </div>
                     </div>
                     <div class="px-5 pb-5 pt-2 flex gap-3">
-                        <button id="torch-btn" onclick="toggleTorch()" class="hidden w-16 bg-slate-800 hover:bg-slate-700 text-yellow-400 font-bold py-3 px-3 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center">
+                        <button id="switch-cam-btn" onclick="switchCamera()" class="w-14 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-3 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center border border-slate-700">
+                            <span class="material-symbols-rounded">cameraswitch</span>
+                        </button>
+                        <button id="torch-btn" type="button" onclick="toggleTorch()" class="hidden w-14 bg-slate-800 hover:bg-slate-700 text-yellow-400 font-bold py-3 px-3 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center border border-slate-700">
                             <span id="torch-icon" class="material-symbols-rounded">flash_on</span>
                         </button>
-                        <button id="stop-camera-btn" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
-                            <span class="material-symbols-rounded icon-sm">videocam_off</span> ปิดกล้อง
+                        <button id="stop-camera-btn" type="button" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+                            <span class="material-symbols-rounded icon-sm">videocam_off</span> ปิด
                         </button>
                     </div>
                 </div>
@@ -145,7 +137,6 @@
                             <span class="material-symbols-rounded icon-sm">refresh</span>
                         </button>
                     </div>
-                    
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                             <span class="material-symbols-rounded icon-sm">search</span>
@@ -164,7 +155,6 @@
                     <span class="material-symbols-rounded text-slate-300 text-4xl block mb-2">inbox</span>
                     ยังไม่มีข้อมูล
                 </div>
-                
                 <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
                     <table class="w-full text-sm text-left">
                         <tbody id="history-list" class="divide-y divide-slate-100"></tbody>
@@ -233,6 +223,11 @@
             </div>
             <div id="modal-qr-display" class="flex justify-center mb-4 hidden"></div>
             <p id="modal-code-text" class="text-2xl font-mono font-bold text-blue-600 mb-6 tracking-wide select-all"></p>
+            
+            <button id="modal-copy-btn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold active:bg-slate-300 mb-3 flex items-center justify-center gap-2">
+                <span class="material-symbols-rounded icon-sm">content_copy</span> คัดลอกรหัส
+            </button>
+
             <button onclick="document.getElementById('barcode-modal').classList.add('hidden')" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold active:bg-slate-700">ปิด</button>
         </div>
     </div>
@@ -243,10 +238,10 @@
         // =========================================================================
         // ⚠️ ใส่ URL Google Apps Script ที่นี่ ⚠️
         // =========================================================================
-        const API_URL = "https://script.google.com/macros/s/AKfycbxMswJGCHo_m4S1SDSdyYysHt8gOUYwxsyX1g_5trbEMJ-kFGDOHsfWDY2tWOwEwwUR4A/exec"; 
+        const API_URL = "https://script.google.com/macros/s/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/exec"; 
         
-        let savedConfigs = []; let activeId = ""; let savedAppUrl = ""; let isProcessing = false; let html5QrCode = null;
-        let isTorchOn = false; // สถานะไฟฉาย
+        let savedConfigs = []; let activeId = ""; let savedAppUrl = ""; let isProcessing = false; 
+        let html5QrCode = null; let isTorchOn = false; let currentFacingMode = "environment";
 
         const inputField = document.getElementById('manual-input'); const saveBtn = document.getElementById('save-btn'); const historyList = document.getElementById('history-list');
 
@@ -327,7 +322,10 @@
                              <span class="flex items-center gap-1 text-slate-300">| ${item.device}</span>
                         </div>
                     </td>
-                    <td class="px-2 py-3 text-right align-top w-12">
+                    <td class="px-2 py-3 text-right align-top w-20 whitespace-nowrap">
+                        <button onclick="copyToClipboard('${item.code}')" class="text-slate-400 p-2 rounded-full hover:bg-blue-50 hover:text-blue-600 transition-colors mr-1">
+                            <span class="material-symbols-rounded icon-sm">content_copy</span>
+                        </button>
                         <button onclick="deleteHistory('${item.row}')" class="text-slate-300 p-2 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors">
                             <span class="material-symbols-rounded icon-sm">delete</span>
                         </button>
@@ -342,145 +340,87 @@
             const input = document.getElementById('search-history');
             const filter = input.value.toLowerCase();
             const rows = historyList.getElementsByTagName('tr');
-            let hasVisible = false;
             for (let i = 0; i < rows.length; i++) {
                 const codeDiv = rows[i].querySelector('.code-text');
                 if (codeDiv) {
                     const txtValue = codeDiv.textContent || codeDiv.innerText;
-                    if (txtValue.toLowerCase().indexOf(filter) > -1) { rows[i].style.display = ""; hasVisible = true; } 
-                    else { rows[i].style.display = "none"; }
+                    if (txtValue.toLowerCase().indexOf(filter) > -1) rows[i].style.display = ""; 
+                    else rows[i].style.display = "none";
                 }
             }
         }
 
+        // ฟังก์ชันคัดลอก (Copy)
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 1000 }).fire({ icon: 'success', title: 'คัดลอกแล้ว' });
+            }).catch(err => {
+                console.error('Copy failed', err);
+            });
+        }
+
         function formatDate(dateStr) { try { return new Date(dateStr).toLocaleString('th-TH', { hour: '2-digit', minute:'2-digit', day:'numeric', month:'short' }); } catch(e) { return dateStr; } }
         function deleteHistory(row) { Swal.fire({ title: 'ยืนยันลบ?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก' }).then(async (r) => { if(r.isConfirmed) { Swal.showLoading(); await callAPI('deleteHistory', row); Swal.close(); loadHistory(); } }); }
-        
         function playBeep() { const a = document.getElementById('beep-sound'); if(a){ a.currentTime=0; a.play().catch(()=>{}); } }
         
-        // --- Camera & Torch Logic ---
-        document.getElementById('start-camera-btn').addEventListener('click', () => {
-            const triggerDiv = document.getElementById('camera-trigger');
-            const containerDiv = document.getElementById('camera-container');
-            triggerDiv.classList.add('hidden'); containerDiv.classList.remove('hidden');
-            playBeep();
-            
+        // --- Camera & Tools ---
+        function startScanner(facingMode) {
             html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0, videoConstraints: { facingMode: "environment", focusMode: "continuous", width: { min: 640, ideal: 1280 }, height: { min: 480, ideal: 720 } } };
-
-            html5QrCode.start({ facingMode: "environment" }, config, 
-                (txt) => { if(!isProcessing) { playBeep(); inputField.value = txt; handleSave(txt); } }, 
-                (err) => {}
-            ).then(() => {
-                // เช็คว่าเครื่องรองรับไฟฉายหรือไม่
-                try {
-                    const track = html5QrCode.getRunningTrackCameraCapabilities();
-                    // ถ้ามี torchFeature ให้โชว์ปุ่ม
-                    if (track && track.torchFeature && track.torchFeature.isSupported()) {
-                       document.getElementById('torch-btn').classList.remove('hidden');
-                    } else {
-                       // กรณี library version เก่า อาจต้องเช็คอีกแบบ (แต่ html5-qrcode ล่าสุดใช้แบบนี้)
-                       // หรือลองเสี่ยงดวงแสดงปุ่มไว้ ถ้ากดแล้ว error ค่อยซ่อน
-                       // แต่เพื่อความชัวร์ ซ่อนไว้เป็น default ดีแล้ว
-                    }
-                    // หมายเหตุ: บาง browser บน Android อาจไม่ return capability แต่สั่งเปิดได้
-                    // ดังนั้นเราจะลอง "แสดงปุ่ม" ไว้ก่อนสำหรับ Android แล้วถ้ากดไม่ได้ค่อยซ่อน
-                    if(/android/i.test(navigator.userAgent)) {
-                        document.getElementById('torch-btn').classList.remove('hidden');
-                    }
-                } catch(e) { console.log("Torch capability check failed"); }
-            })
+            const config = { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0, videoConstraints: { facingMode: facingMode, focusMode: "continuous", width: { min: 640, ideal: 1280 }, height: { min: 480, ideal: 720 } } };
+            const readerEl = document.getElementById('reader');
+            if(facingMode === "user") readerEl.classList.add("mirror-mode"); else readerEl.classList.remove("mirror-mode");
+            html5QrCode.start({ facingMode: facingMode }, config, (txt) => { if(!isProcessing) { playBeep(); inputField.value = txt; handleSave(txt); } }, (err) => {})
+            .then(() => { if(facingMode === "environment") document.getElementById('torch-btn').classList.remove('hidden'); else document.getElementById('torch-btn').classList.add('hidden'); })
             .catch(err => { console.error(err); Swal.fire('Camera Error', 'ไม่สามารถเปิดกล้องได้', 'error'); resetCam(); });
-        });
-
-        // ฟังก์ชันเปิด/ปิดไฟฉาย
+        }
+        document.getElementById('start-camera-btn').addEventListener('click', () => { document.getElementById('camera-trigger').classList.add('hidden'); document.getElementById('camera-container').classList.remove('hidden'); playBeep(); startScanner(currentFacingMode); });
+        document.getElementById('stop-camera-btn').addEventListener('click', () => { stopScanner(); });
+        function stopScanner() { if(html5QrCode) html5QrCode.stop().then(resetCam).catch(resetCam); else resetCam(); }
+        function resetCam() { 
+            document.getElementById('camera-container').classList.add('hidden'); document.getElementById('camera-trigger').classList.remove('hidden'); document.getElementById('torch-btn').classList.add('hidden'); isTorchOn = false; 
+            const icon = document.getElementById('torch-icon'); icon.innerText = "flash_on"; icon.parentElement.classList.remove("bg-yellow-400", "text-black"); icon.parentElement.classList.add("bg-slate-800", "text-yellow-400");
+        }
+        function switchCamera() { if(html5QrCode) { html5QrCode.stop().then(() => { currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment"; startScanner(currentFacingMode); }).catch(console.error); } }
         async function toggleTorch() {
-             if(html5QrCode) {
+             if(html5QrCode && currentFacingMode === "environment") {
                  isTorchOn = !isTorchOn;
                  const icon = document.getElementById('torch-icon');
-                 try {
-                     await html5QrCode.applyVideoConstraints({
-                         advanced: [{ torch: isTorchOn }]
-                     });
-                     
-                     if(isTorchOn) {
-                        icon.innerText = "flash_off";
-                        icon.parentElement.classList.add("bg-yellow-400", "text-black");
-                        icon.parentElement.classList.remove("bg-slate-800", "text-yellow-400");
-                     } else {
-                        icon.innerText = "flash_on";
-                        icon.parentElement.classList.remove("bg-yellow-400", "text-black");
-                        icon.parentElement.classList.add("bg-slate-800", "text-yellow-400");
-                     }
-                 } catch(err) {
-                     isTorchOn = !isTorchOn; // กลับค่าเดิม
-                     Swal.fire({ title: 'ไม่รองรับ', text: 'อุปกรณ์หรือ Browser นี้ไม่รองรับการสั่งเปิดไฟฉาย', icon: 'warning', timer: 2000, showConfirmButton: false });
-                     document.getElementById('torch-btn').classList.add('hidden'); // ซ่อนปุ่มถาวร
-                 }
+                 try { await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isTorchOn }] });
+                     if(isTorchOn) { icon.innerText = "flash_off"; icon.parentElement.classList.add("bg-yellow-400", "text-black"); icon.parentElement.classList.remove("bg-slate-800", "text-yellow-400"); } 
+                     else { icon.innerText = "flash_on"; icon.parentElement.classList.remove("bg-yellow-400", "text-black"); icon.parentElement.classList.add("bg-slate-800", "text-yellow-400"); }
+                 } catch(err) { isTorchOn = !isTorchOn; Swal.fire({ title: 'เปิดไฟไม่ได้', text: 'อุปกรณ์ไม่รองรับ', icon: 'warning', timer: 2000, showConfirmButton: false }); }
              }
         }
-
-        document.getElementById('stop-camera-btn').addEventListener('click', () => { if(html5QrCode) html5QrCode.stop().then(resetCam).catch(resetCam); else resetCam(); });
-        function resetCam() { 
-            document.getElementById('camera-container').classList.add('hidden'); 
-            document.getElementById('camera-trigger').classList.remove('hidden'); 
-            document.getElementById('torch-btn').classList.add('hidden'); // ซ่อนปุ่มไฟเมื่อปิดกล้อง
-            isTorchOn = false; // รีเซ็ตค่าไฟ
-            // รีเซ็ตสีปุ่ม
-            const icon = document.getElementById('torch-icon');
-            icon.innerText = "flash_on";
-            icon.parentElement.classList.remove("bg-yellow-400", "text-black");
-            icon.parentElement.classList.add("bg-slate-800", "text-yellow-400");
-            
-            const overlay = document.querySelector('.scan-region-highlight'); if(overlay) overlay.remove();
-        }
-
-        document.getElementById('record-form').addEventListener('submit', (e) => { 
-            e.preventDefault(); 
-            handleSave(inputField.value); 
-        });
-
-        async function handleSaveConfig() { 
-            const name = document.getElementById('config-name').value; const id = document.getElementById('config-id').value; const idx = document.getElementById('config-select').value;
-            if(!name || !id) { Swal.fire('ระบุข้อมูลให้ครบ', '', 'error'); return; }
-            if(idx !== "") savedConfigs[idx] = {name, id}; else savedConfigs.push({name, id});
-            Swal.showLoading(); await callAPI('saveConfig', { configs: savedConfigs, id: id }); Swal.close();
-            activeId = id; reloadConfigs(); loadHistory();
-        }
+        document.getElementById('record-form').addEventListener('submit', (e) => { e.preventDefault(); handleSave(inputField.value); });
+        async function handleSaveConfig() { const name = document.getElementById('config-name').value; const id = document.getElementById('config-id').value; const idx = document.getElementById('config-select').value; if(!name || !id) { Swal.fire('ระบุข้อมูลให้ครบ', '', 'error'); return; } if(idx !== "") savedConfigs[idx] = {name, id}; else savedConfigs.push({name, id}); Swal.showLoading(); await callAPI('saveConfig', { configs: savedConfigs, id: id }); Swal.close(); activeId = id; reloadConfigs(); loadHistory(); }
         async function handleDeleteConfig() { const idx = document.getElementById('config-select').value; if(idx === "") return; savedConfigs.splice(idx, 1); activeId = savedConfigs.length ? savedConfigs[0].id : ""; await callAPI('saveConfig', { configs: savedConfigs, id: activeId }); reloadConfigs(); }
-        function reloadConfigs() {
-            const sel = document.getElementById('config-select'); sel.innerHTML = '<option value="">-- สร้างใหม่ --</option>';
-            const statusBar = document.getElementById('status-bar'); let found = false;
-            savedConfigs.forEach((c,i) => { 
-                const opt = document.createElement('option'); opt.value = i; opt.text = c.name; 
-                if(c.id === activeId) { opt.selected = true; document.getElementById('current-active-name').innerText = c.name; statusBar.classList.remove('hidden'); found = true; }
-                sel.appendChild(opt); 
-            });
-            if(!found) statusBar.classList.add('hidden'); onConfigChange();
-        }
-        function onConfigChange() {
-            const idx = document.getElementById('config-select').value;
-            if(idx !== "") { const cfg = savedConfigs[idx]; document.getElementById('config-name').value = cfg.name; document.getElementById('config-id').value = cfg.id; document.getElementById('btn-delete').classList.remove('hidden'); } 
-            else { document.getElementById('config-name').value = ""; document.getElementById('config-id').value = ""; document.getElementById('btn-delete').classList.add('hidden'); }
-        }
+        function reloadConfigs() { const sel = document.getElementById('config-select'); sel.innerHTML = '<option value="">-- สร้างใหม่ --</option>'; const statusBar = document.getElementById('status-bar'); let found = false; savedConfigs.forEach((c,i) => { const opt = document.createElement('option'); opt.value = i; opt.text = c.name; if(c.id === activeId) { opt.selected = true; document.getElementById('current-active-name').innerText = c.name; statusBar.classList.remove('hidden'); found = true; } sel.appendChild(opt); }); if(!found) statusBar.classList.add('hidden'); onConfigChange(); }
+        function onConfigChange() { const idx = document.getElementById('config-select').value; if(idx !== "") { const cfg = savedConfigs[idx]; document.getElementById('config-name').value = cfg.name; document.getElementById('config-id').value = cfg.id; document.getElementById('btn-delete').classList.remove('hidden'); } else { document.getElementById('config-name').value = ""; document.getElementById('config-id').value = ""; document.getElementById('btn-delete').classList.add('hidden'); } }
         async function saveAppUrlSetting() { const url = document.getElementById('app-url-setting').value; await callAPI('saveAppUrl', url); savedAppUrl = url; Swal.fire('Saved', '', 'success'); }
         function openSettings() { const details = document.getElementById('settings-details'); details.open = true; details.scrollIntoView({behavior: "smooth"}); }
         
-        function showBarcodeModal(code) {
-            const modal = document.getElementById('barcode-modal'); const svg = document.getElementById('modal-barcode-display'); const qrDiv = document.getElementById('modal-qr-display');
-            document.getElementById('modal-code-text').innerText = code; modal.classList.remove('hidden');
-            try { svg.style.display = 'block'; qrDiv.style.display = 'none'; qrDiv.innerHTML = ''; JsBarcode(svg, code, { format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false }); } 
-            catch (e) { svg.style.display = 'none'; qrDiv.style.display = 'flex'; new QRCode(qrDiv, { text: code, width: 150, height: 150 }); }
+        function showBarcodeModal(code) { 
+            const modal = document.getElementById('barcode-modal'); 
+            const svg = document.getElementById('modal-barcode-display'); 
+            const qrDiv = document.getElementById('modal-qr-display'); 
+            
+            document.getElementById('modal-code-text').innerText = code; 
+            
+            // ตั้งค่า onclick ให้ปุ่ม copy ใน modal เพื่อ copy รหัสปัจจุบัน
+            const copyBtn = document.getElementById('modal-copy-btn');
+            copyBtn.onclick = function() { copyToClipboard(code); };
+
+            modal.classList.remove('hidden'); 
+            try { 
+                svg.style.display = 'block'; qrDiv.style.display = 'none'; qrDiv.innerHTML = ''; 
+                JsBarcode(svg, code, { format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false }); 
+            } catch (e) { 
+                svg.style.display = 'none'; qrDiv.style.display = 'flex'; 
+                new QRCode(qrDiv, { text: code, width: 150, height: 150 }); 
+            } 
         }
-        function openShareModal() {
-            const targetUrl = savedAppUrl || window.location.href;
-            Swal.fire({
-                title: 'Share App',
-                html: `<div class="flex flex-col items-center gap-4"><div id="share-qrcode" class="bg-white p-2 rounded border border-slate-100"></div><input type="text" value="${targetUrl}" readonly class="w-full text-center text-sm border p-2 rounded bg-slate-50 text-slate-500"></div>`,
-                showConfirmButton: true, confirmButtonText: 'Copy Link', confirmButtonColor: '#1e293b', showCloseButton: true,
-                didOpen: () => { document.getElementById("share-qrcode").innerHTML = ""; new QRCode(document.getElementById("share-qrcode"), { text: targetUrl, width: 150, height: 150, colorDark: "#1e293b" }); }
-            }).then((r) => { if(r.isConfirmed) { navigator.clipboard.writeText(targetUrl); Swal.fire({title: 'Copied', icon: 'success', toast: true, position: 'top', showConfirmButton: false, timer: 1500}); } });
-        }
+
+        function openShareModal() { const targetUrl = savedAppUrl || window.location.href; Swal.fire({ title: 'Share App', html: `<div class="flex flex-col items-center gap-4"><div id="share-qrcode" class="bg-white p-2 rounded border border-slate-100"></div><input type="text" value="${targetUrl}" readonly class="w-full text-center text-sm border p-2 rounded bg-slate-50 text-slate-500"></div>`, showConfirmButton: true, confirmButtonText: 'Copy Link', confirmButtonColor: '#1e293b', showCloseButton: true, didOpen: () => { document.getElementById("share-qrcode").innerHTML = ""; new QRCode(document.getElementById("share-qrcode"), { text: targetUrl, width: 150, height: 150, colorDark: "#1e293b" }); } }).then((r) => { if(r.isConfirmed) { navigator.clipboard.writeText(targetUrl); Swal.fire({title: 'Copied', icon: 'success', toast: true, position: 'top', showConfirmButton: false, timer: 1500}); } }); }
         
         initSystem();
     </script>

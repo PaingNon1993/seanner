@@ -361,11 +361,11 @@
             }
         }
 
-        // --- Copy Functions (Updated) ---
+        // --- Copy Functions ---
         function copyToClipboard(code, time) {
             let textToCopy = code;
             if (time) {
-                // รูปแบบ: Code [Tab] Date Time (เหมาะสำหรับวางใน Excel จะแยกคอลัมน์ให้อัตโนมัติ)
+                // รูปแบบ: Code [Tab] Date Time (สำหรับการวางใน Excel)
                 textToCopy = `${code}\t${formatDate(time)}`; 
             }
 
@@ -379,14 +379,13 @@
                 Swal.fire({ toast: true, position: 'top', title: 'ไม่มีข้อมูลให้คัดลอก', icon: 'info', showConfirmButton: false, timer: 1500 });
                 return;
             }
-            
             // รวมข้อมูลทั้งหมด: Code [Tab] Date Time [New Line]
             const allData = currentHistoryData.map(item => `${item.code}\t${formatDate(item.time)}`).join('\n');
             
             navigator.clipboard.writeText(allData).then(() => {
                 Swal.fire({
                     title: 'คัดลอกทั้งหมดแล้ว!',
-                    text: `ข้อมูล ${currentHistoryData.length} รายการ (พร้อมวันเวลา)`,
+                    text: `ข้อมูล ${currentHistoryData.length} รายการ`,
                     icon: 'success',
                     timer: 1500,
                     showConfirmButton: false
@@ -397,12 +396,28 @@
         }
 
         function formatDate(dateStr) { 
-            try { 
-                return new Date(dateStr).toLocaleString('th-TH', { 
-                    day: '2-digit', month: '2-digit', year: '2-digit', 
-                    hour: '2-digit', minute: '2-digit', second: '2-digit' 
-                }); 
-            } catch(e) { return dateStr; } 
+            if (!dateStr) return "";
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+
+                // ดึงค่า วัน, เดือน, ปี, เวลา
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                
+                // คำนวณปี พ.ศ. เอาเฉพาะ 2 หลักท้าย (เช่น 2568 -> 68)
+                const year = d.getFullYear();
+                const thaiYear = (year + 543).toString().slice(-2);
+                
+                const hours = String(d.getHours()).padStart(2, '0');
+                const minutes = String(d.getMinutes()).padStart(2, '0');
+                const seconds = String(d.getSeconds()).padStart(2, '0');
+
+                // คืนค่ารูปแบบ: 31/12/68 14:30:45
+                return `${day}/${month}/${thaiYear} ${hours}:${minutes}:${seconds}`;
+            } catch(e) { 
+                return dateStr; 
+            } 
         }
         
         function deleteHistory(row) { Swal.fire({ title: 'ยืนยันลบ?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก' }).then(async (r) => { if(r.isConfirmed) { Swal.showLoading(); await callAPI('deleteHistory', row); Swal.close(); loadHistory(); } }); }
@@ -437,10 +452,10 @@
             const qrDiv = document.getElementById('modal-qr-display'); 
             
             document.getElementById('modal-code-text').innerText = code; 
-            document.getElementById('modal-code-time').innerText = formatDate(time); // Show time in modal
+            document.getElementById('modal-code-time').innerText = formatDate(time); // ใช้ฟอร์แมตใหม่
 
             const copyBtn = document.getElementById('modal-copy-btn');
-            copyBtn.onclick = function() { copyToClipboard(code, time); }; // Pass time to copy function
+            copyBtn.onclick = function() { copyToClipboard(code, time); }; 
             
             modal.classList.remove('hidden'); 
             try { 

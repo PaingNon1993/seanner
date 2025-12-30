@@ -25,9 +25,7 @@
         .material-symbols-rounded { font-size: 24px; vertical-align: middle; }
         .icon-sm { font-size: 18px; }
         .icon-lg { font-size: 32px; }
-    </style>
-    
-    <style>
+        
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         
         body { 
@@ -57,7 +55,7 @@
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             width: 250px; height: 250px;
-            border: 2px solid rgba(255, 255, 255, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.4);
             border-radius: 20px;
             box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
             z-index: 10;
@@ -66,7 +64,7 @@
         .scan-region-highlight::after {
             content: ''; position: absolute;
             top: -2px; left: -2px; right: -2px; bottom: -2px;
-            border: 4px solid #3b82f6; /* สีฟ้า Focus */
+            border: 4px solid #3b82f6;
             border-radius: 20px;
             clip-path: polygon(0% 20%, 0% 0%, 20% 0%, 100% 0%, 100% 20%, 100% 100%, 80% 100%, 100% 100%, 100% 80%, 0% 100%, 20% 100%, 0% 100%, 0% 80%);
             animation: pulse-border 2s infinite;
@@ -116,7 +114,6 @@
                 <div class="p-3 bg-black relative">
                     <div class="min-h-[250px] bg-slate-900 rounded-xl overflow-hidden relative border border-slate-700 flex items-center justify-center">
                         <div id="reader" class="hidden w-full h-full"></div>
-                        
                         <div id="camera-placeholder" class="text-center space-y-3 p-4 text-slate-500">
                              <div class="flex justify-center opacity-30">
                                 <span class="material-symbols-rounded text-6xl">photo_camera</span>
@@ -204,7 +201,7 @@
                             </div>
                         </div>
                         <div class="grid grid-cols-1 gap-3">
-                            <input type="text" id="config-name" class="w-full rounded border px-3 py-2 text-sm" placeholder="ชื่อเรียก (เช่น สต็อกหน้าร้าน)">
+                            <input type="text" id="config-name" class="w-full rounded border px-3 py-2 text-sm" placeholder="ชื่อเรียก (เช่น สาขา 1)">
                             <input type="text" id="config-id" class="w-full rounded border px-3 py-2 text-sm font-mono" placeholder="Google Sheet ID">
                         </div>
                         <div class="flex gap-3 pt-2">
@@ -247,7 +244,7 @@
         // =========================================================================
         // ⚠️ ใส่ URL Google Apps Script ที่นี่ ⚠️
         // =========================================================================
-        const API_URL = "https://script.google.com/macros/s/AKfycbx779mdyp1wLGxdWDuiBYSFuwhpfurQnuYD3xr9Wie79zfGbCufcuUsXRIZEskYOScN7g/exec"; 
+        const API_URL = "https://script.google.com/macros/s/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/exec"; 
         
         // --- Variables ---
         let savedConfigs = []; let activeId = ""; let savedAppUrl = ""; let isProcessing = false; let html5QrCode = null;
@@ -272,11 +269,24 @@
             }
         }
 
+        // Helper: ดึงชื่อเครื่อง
+        function getDeviceName() {
+             let device = "PC/Web";
+             const ua = navigator.userAgent;
+             if (/android/i.test(ua)) device = "Android";
+             else if (/iPad|iPhone|iPod/.test(ua)) device = "iOS";
+             return device + " (" + navigator.platform + ")";
+        }
+
         async function handleSave(code) {
             if(!code) return;
             isProcessing = true; saveBtn.disabled = true; 
             saveBtn.innerHTML = '<span class="material-symbols-rounded animate-spin icon-sm">progress_activity</span>';
-            const res = await callAPI('saveCode', code);
+            
+            // ส่ง Object {code, deviceName} ไปที่ Server
+            const payload = { code: code, deviceName: getDeviceName() };
+            const res = await callAPI('saveCode', payload);
+            
             isProcessing = false; saveBtn.disabled = false; 
             saveBtn.innerHTML = '<span class="material-symbols-rounded icon-sm">save</span> บันทึก';
             
@@ -284,7 +294,7 @@
                 Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 1500 }).fire({ icon: 'success', title: 'บันทึกแล้ว' });
                 inputField.value = ''; loadHistory();
             } else if (res.duplicate) {
-                Swal.fire({ title: 'ซ้ำ!', text: `${res.code}`, icon: 'warning', timer: 2000, showConfirmButton: false });
+                Swal.fire({ title: 'ข้อมูลซ้ำ!', text: `${res.code} ถูกบันทึกไปแล้ว`, icon: 'warning', timer: 2500, showConfirmButton: false });
                 inputField.value = '';
             } else {
                 Swal.fire('Error', res.error, 'error');
@@ -307,8 +317,9 @@
                             <span class="material-symbols-rounded text-slate-300 icon-sm">qr_code_2</span>
                             ${item.code} 
                         </div>
-                        <div class="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                            <span class="material-symbols-rounded text-[10px]">schedule</span> ${formatDate(item.time)}
+                        <div class="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+                             <span class="flex items-center gap-1"><span class="material-symbols-rounded text-[10px]">schedule</span> ${formatDate(item.time)}</span>
+                             <span class="flex items-center gap-1 text-slate-300">| ${item.device}</span>
                         </div>
                     </td>
                     <td class="px-2 py-3 text-right align-top w-12">
@@ -360,7 +371,7 @@
         async function saveAppUrlSetting() { const url = document.getElementById('app-url-setting').value; await callAPI('saveAppUrl', url); savedAppUrl = url; Swal.fire('Saved', '', 'success'); }
         function openSettings() { const details = document.getElementById('settings-details'); details.open = true; details.scrollIntoView({behavior: "smooth"}); }
 
-        // --- Camera Logic (Updated Focus) ---
+        // --- Camera & Sound Logic ---
         function playBeep() { const a = document.getElementById('beep-sound'); if(a){ a.currentTime=0; a.play().catch(()=>{}); } }
         
         document.getElementById('start-camera-btn').addEventListener('click', () => {
@@ -370,50 +381,33 @@
             document.getElementById('start-camera-btn').classList.add('hidden'); 
             document.getElementById('stop-camera-btn').classList.remove('hidden');
             
-            // เพิ่ม Overlay กรอบสแกน
+            // Add Overlay
             if(!document.querySelector('.scan-region-highlight')) {
-                const overlay = document.createElement('div');
-                overlay.className = 'scan-region-highlight';
-                readerDiv.appendChild(overlay);
+                const overlay = document.createElement('div'); overlay.className = 'scan-region-highlight'; readerDiv.appendChild(overlay);
             }
 
-            playBeep(); 
+            playBeep(); // Trigger Audio Context
 
             html5QrCode = new Html5Qrcode("reader");
             
-            // Config กล้อง: เน้นกล้องหลัง + Focus Mode Continuous + ความละเอียดสูง
+            // High Resolution & Continuous Focus Config
             const config = { 
-                fps: 15, 
-                qrbox: { width: 250, height: 250 }, 
-                aspectRatio: 1.0,
-                videoConstraints: {
-                    facingMode: "environment",
-                    focusMode: "continuous", // พยายามบังคับ Auto Focus
-                    width: { min: 640, ideal: 1280, max: 1920 }, // ความละเอียดสูงช่วยให้จับภาพชัดขึ้น
-                    height: { min: 480, ideal: 720, max: 1080 }
-                }
+                fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0,
+                videoConstraints: { facingMode: "environment", focusMode: "continuous", width: { min: 640, ideal: 1280 }, height: { min: 480, ideal: 720 } }
             };
 
             html5QrCode.start({ facingMode: "environment" }, config, 
                 (txt) => { if(!isProcessing) { playBeep(); inputField.value = txt; handleSave(txt); } }, 
                 (err) => {}
-            ).catch(err => { 
-                console.error(err);
-                Swal.fire('Camera Error', 'ไม่สามารถเปิดกล้องได้ หรือ Browser ไม่รองรับ', 'error'); 
-                resetCam(); 
-            });
+            ).catch(err => { console.error(err); Swal.fire('Camera Error', 'ไม่สามารถเปิดกล้องได้', 'error'); resetCam(); });
         });
 
         document.getElementById('stop-camera-btn').addEventListener('click', () => { if(html5QrCode) html5QrCode.stop().then(resetCam).catch(resetCam); else resetCam(); });
         
         function resetCam() { 
-            document.getElementById('reader').classList.add('hidden'); 
-            document.getElementById('camera-placeholder').classList.remove('hidden'); 
-            document.getElementById('stop-camera-btn').classList.add('hidden'); 
-            document.getElementById('start-camera-btn').classList.remove('hidden'); 
-            // ลบ overlay ออกถ้ามี
-            const overlay = document.querySelector('.scan-region-highlight');
-            if(overlay) overlay.remove();
+            document.getElementById('reader').classList.add('hidden'); document.getElementById('camera-placeholder').classList.remove('hidden'); 
+            document.getElementById('stop-camera-btn').classList.add('hidden'); document.getElementById('start-camera-btn').classList.remove('hidden'); 
+            const overlay = document.querySelector('.scan-region-highlight'); if(overlay) overlay.remove();
         }
 
         inputField.addEventListener('keydown', (e) => { if(e.key === 'Enter' && inputField.value) { e.preventDefault(); handleSave(inputField.value); } });
@@ -432,13 +426,8 @@
                 title: 'Share App',
                 html: `<div class="flex flex-col items-center gap-4"><div id="share-qrcode" class="bg-white p-2 rounded border border-slate-100"></div><input type="text" value="${targetUrl}" readonly class="w-full text-center text-sm border p-2 rounded bg-slate-50 text-slate-500"></div>`,
                 showConfirmButton: true, confirmButtonText: 'Copy Link', confirmButtonColor: '#1e293b', showCloseButton: true,
-                didOpen: () => {
-                    document.getElementById("share-qrcode").innerHTML = "";
-                    new QRCode(document.getElementById("share-qrcode"), { text: targetUrl, width: 150, height: 150, colorDark: "#1e293b" });
-                }
-            }).then((r) => {
-                if(r.isConfirmed) { navigator.clipboard.writeText(targetUrl); Swal.fire({title: 'Copied', icon: 'success', toast: true, position: 'top', showConfirmButton: false, timer: 1500}); }
-            });
+                didOpen: () => { document.getElementById("share-qrcode").innerHTML = ""; new QRCode(document.getElementById("share-qrcode"), { text: targetUrl, width: 150, height: 150, colorDark: "#1e293b" }); }
+            }).then((r) => { if(r.isConfirmed) { navigator.clipboard.writeText(targetUrl); Swal.fire({title: 'Copied', icon: 'success', toast: true, position: 'top', showConfirmButton: false, timer: 1500}); } });
         }
         initSystem();
     </script>

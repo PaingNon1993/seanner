@@ -32,7 +32,6 @@
     <script src="./JsBarcode.all.min.js"></script>
 
     <style>
-      
         body { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
         .material-symbols-rounded { font-size: 24px; vertical-align: middle; }
         .icon-sm { font-size: 18px; }
@@ -133,9 +132,14 @@
                             <span class="material-symbols-rounded icon-sm text-slate-400">history</span>
                             ประวัติ <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs" id="total-count">0</span>
                         </h3>
-                        <button onclick="loadHistory()" class="text-xs text-blue-600 hover:text-blue-800 font-medium p-1 flex items-center gap-1">
-                            <span class="material-symbols-rounded icon-sm">refresh</span>
-                        </button>
+                        <div class="flex items-center gap-1">
+                            <button onclick="copyAllHistory()" class="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1 active:scale-95 transition-transform">
+                                <span class="material-symbols-rounded icon-sm">content_copy</span> Copy All
+                            </button>
+                            <button onclick="loadHistory()" class="text-xs text-slate-500 hover:text-blue-600 font-medium p-2 rounded-full hover:bg-slate-100 flex items-center">
+                                <span class="material-symbols-rounded icon-sm">refresh</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
@@ -242,6 +246,7 @@
         
         let savedConfigs = []; let activeId = ""; let savedAppUrl = ""; let isProcessing = false; 
         let html5QrCode = null; let isTorchOn = false; let currentFacingMode = "environment";
+        let currentHistoryData = []; // เก็บข้อมูลประวัติทั้งหมด
 
         const inputField = document.getElementById('manual-input'); const saveBtn = document.getElementById('save-btn'); const historyList = document.getElementById('history-list');
 
@@ -304,11 +309,21 @@
         async function loadHistory() {
             if(!activeId) return;
             document.getElementById('history-loading').classList.remove('hidden'); document.getElementById('history-empty').classList.add('hidden'); historyList.innerHTML = '';
+            
             const res = await callAPI('getHistory');
-            document.getElementById('history-loading').classList.add('hidden'); document.getElementById('total-count').innerText = res.total || 0;
-            if(!res.history || res.history.length === 0) { document.getElementById('history-empty').classList.remove('hidden'); return; }
+            
+            document.getElementById('history-loading').classList.add('hidden'); 
+            document.getElementById('total-count').innerText = res.total || 0;
+            
+            // เก็บข้อมูลลงตัวแปร Global
+            currentHistoryData = res.history || [];
 
-            res.history.forEach(item => {
+            if(!currentHistoryData || currentHistoryData.length === 0) { 
+                document.getElementById('history-empty').classList.remove('hidden'); 
+                return; 
+            }
+
+            currentHistoryData.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 border-b border-slate-100 group transition-colors";
                 tr.innerHTML = `
@@ -350,12 +365,35 @@
             }
         }
 
-        // ฟังก์ชันคัดลอก (Copy)
+        // --- Copy Functions ---
+        
+        // คัดลอกทีละรายการ
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
                 Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 1000 }).fire({ icon: 'success', title: 'คัดลอกแล้ว' });
+            }).catch(err => { console.error('Copy failed', err); });
+        }
+
+        // คัดลอกทั้งหมด (Copy All)
+        function copyAllHistory() {
+            if (!currentHistoryData || currentHistoryData.length === 0) {
+                Swal.fire({ toast: true, position: 'top', title: 'ไม่มีข้อมูลให้คัดลอก', icon: 'info', showConfirmButton: false, timer: 1500 });
+                return;
+            }
+
+            // ดึงเฉพาะรหัสออกมา และรวมด้วยการขึ้นบรรทัดใหม่
+            const allCodes = currentHistoryData.map(item => item.code).join('\n');
+
+            navigator.clipboard.writeText(allCodes).then(() => {
+                Swal.fire({
+                    title: 'คัดลอกทั้งหมดแล้ว!',
+                    text: `จำนวน ${currentHistoryData.length} รายการ`,
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             }).catch(err => {
-                console.error('Copy failed', err);
+                Swal.fire('Error', 'ไม่สามารถคัดลอกได้', 'error');
             });
         }
 

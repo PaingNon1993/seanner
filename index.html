@@ -2,16 +2,10 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#ffffff">
-    
-    <link rel="apple-touch-icon" href="icon.png">
-    <link rel="icon" type="image/png" href="icon.png">
-    <link rel="manifest" href="manifest.json">
-
     <title>Scanner Pro</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -19,58 +13,32 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
+        body { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
         .material-symbols-rounded { font-size: 24px; vertical-align: middle; }
         .icon-sm { font-size: 18px; }
         .icon-lg { font-size: 32px; }
-        
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
-        
-        body { 
-            font-family: 'Sarabun', sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-            overscroll-behavior-y: none;
-        }
 
-        /* Styling กล้อง */
-        #reader { 
-            width: 100%; 
-            border-radius: 0.75rem; 
-            overflow: hidden; 
-            background-color: #000; 
-            position: relative;
-        }
-        #reader video { 
-            object-fit: cover; 
-            width: 100% !important; 
-            height: 100% !important; 
-            border-radius: 0.75rem; 
-        }
-
-        /* กรอบโฟกัส (Overlay) */
+        /* Camera Styles */
+        #reader { width: 100%; border-radius: 0.75rem; overflow: hidden; background-color: #000; position: relative; }
+        #reader video { object-fit: cover; width: 100% !important; height: 100% !important; border-radius: 0.75rem; }
+        
         .scan-region-highlight {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 250px; height: 250px;
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            border-radius: 20px;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-            z-index: 10;
-            pointer-events: none;
+            border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 20px;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); z-index: 10; pointer-events: none;
         }
         .scan-region-highlight::after {
-            content: ''; position: absolute;
-            top: -2px; left: -2px; right: -2px; bottom: -2px;
-            border: 4px solid #3b82f6;
-            border-radius: 20px;
+            content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px;
+            border: 4px solid #3b82f6; border-radius: 20px;
             clip-path: polygon(0% 20%, 0% 0%, 20% 0%, 100% 0%, 100% 20%, 100% 100%, 80% 100%, 100% 100%, 100% 80%, 0% 100%, 20% 100%, 0% 100%, 0% 80%);
             animation: pulse-border 2s infinite;
         }
         @keyframes pulse-border { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-        
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -105,52 +73,70 @@
                         <span id="current-active-name" class="text-blue-800 font-bold text-sm truncate max-w-[150px]">...</span>
                     </div>
                 </div>
-                <button onclick="openSettings()" class="bg-slate-100 text-slate-600 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold active:bg-slate-300">
-                    ตั้งค่า
-                </button>
+                <button onclick="openSettings()" class="bg-slate-100 text-slate-600 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold active:bg-slate-300">ตั้งค่า</button>
             </div>
 
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden relative z-10 mb-6 p-4 space-y-4">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden relative z-10 mb-6 transition-all duration-300">
                 
-                <button id="start-camera-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3.5 px-4 rounded-xl shadow-md transition-all active:scale-95 touch-manipulation flex items-center justify-center gap-2">
-                    <span class="material-symbols-rounded">videocam</span> 
-                    <span class="text-lg">แตะเพื่อสแกน</span>
-                </button>
+                <div id="camera-trigger" class="p-6 text-center">
+                    <button id="start-camera-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-4 px-4 rounded-xl shadow-lg transition-all active:scale-95 touch-manipulation flex items-center justify-center gap-3 text-lg">
+                        <span class="material-symbols-rounded">videocam</span> เปิดกล้องสแกน
+                    </button>
+                    
+                    <div class="mt-4 flex items-center gap-2">
+                        <div class="h-px bg-slate-200 flex-1"></div>
+                        <span class="text-xs text-slate-400">หรือพิมพ์รหัส</span>
+                        <div class="h-px bg-slate-200 flex-1"></div>
+                    </div>
+                    
+                    <form id="record-form" class="mt-4 flex gap-2">
+                        <div class="relative flex-1">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                <span class="material-symbols-rounded icon-sm">keyboard</span>
+                            </span>
+                            <input type="text" id="manual-input" class="w-full rounded-xl border-slate-200 border-2 pl-10 pr-4 py-3 focus:border-blue-500 focus:outline-none text-base appearance-none transition-colors bg-slate-50 focus:bg-white" placeholder="พิมพ์รหัสสินค้า...">
+                        </div>
+                        <button type="submit" id="save-btn" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-5 rounded-xl shadow-md transition-all active:scale-95 whitespace-nowrap flex items-center gap-2">
+                            <span class="material-symbols-rounded icon-sm">save</span> บันทึก
+                        </button>
+                    </form>
+                </div>
 
-                <div id="camera-scan-area" class="hidden space-y-3 animate-fade-in">
-                     <div class="bg-black rounded-xl overflow-hidden relative border border-slate-700 shadow-inner">
-                        <div class="min-h-[250px] flex items-center justify-center bg-slate-900">
+                <div id="camera-container" class="hidden bg-black transition-all">
+                    <div class="p-3">
+                        <div class="min-h-[300px] bg-slate-900 rounded-xl overflow-hidden relative flex items-center justify-center">
                             <div id="reader" class="w-full h-full"></div>
                         </div>
                     </div>
-                    
-                    <button id="stop-camera-btn" class="w-full bg-red-50 text-red-600 hover:bg-red-100 font-medium py-2.5 px-4 rounded-xl transition-all active:scale-95 touch-manipulation flex items-center justify-center gap-2 border border-red-100">
-                        <span class="material-symbols-rounded icon-sm">videocam_off</span> ปิดกล้อง
-                    </button>
-                </div>
-
-                <form id="record-form" class="flex flex-col sm:flex-row gap-3 pt-2 border-t border-slate-100">
-                    <div class="relative flex-1">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                            <span class="material-symbols-rounded icon-sm">keyboard</span>
-                        </span>
-                        <input type="text" id="manual-input" class="w-full rounded-xl border-slate-200 border-2 pl-10 pr-4 py-3 focus:border-blue-500 focus:outline-none text-lg appearance-none transition-colors" placeholder="พิมพ์รหัส...">
+                    <div class="px-5 pb-5 pt-2">
+                        <button id="stop-camera-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+                            <span class="material-symbols-rounded icon-sm">videocam_off</span> ปิดกล้อง
+                        </button>
                     </div>
-                    <button type="submit" id="save-btn" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-6 rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap touch-manipulation flex items-center justify-center gap-2">
-                        <span class="material-symbols-rounded icon-sm">save</span> บันทึก
-                    </button>
-                </form>
+                </div>
             </div>
 
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-8">
-                <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h3 class="font-bold text-slate-700 flex items-center gap-2">
-                        <span class="material-symbols-rounded icon-sm text-slate-400">history</span>
-                        ประวัติ <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs" id="total-count">0</span>
-                    </h3>
-                    <button onclick="loadHistory()" class="text-xs text-blue-600 hover:text-blue-800 font-medium p-2 -mr-2 flex items-center gap-1">
-                        <span class="material-symbols-rounded icon-sm">refresh</span> รีเฟรช
-                    </button>
+                <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-bold text-slate-700 flex items-center gap-2">
+                            <span class="material-symbols-rounded icon-sm text-slate-400">history</span>
+                            ประวัติ <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs" id="total-count">0</span>
+                        </h3>
+                        <button onclick="loadHistory()" class="text-xs text-blue-600 hover:text-blue-800 font-medium p-1 flex items-center gap-1">
+                            <span class="material-symbols-rounded icon-sm">refresh</span>
+                        </button>
+                    </div>
+                    
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <span class="material-symbols-rounded icon-sm">search</span>
+                        </span>
+                        <input type="text" id="search-history" onkeyup="filterHistory()" class="w-full rounded-lg border border-slate-200 pl-9 pr-8 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" placeholder="ค้นหาข้อมูลที่สแกนแล้ว...">
+                        <button onclick="document.getElementById('search-history').value=''; filterHistory();" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-300 hover:text-slate-500">
+                            <span class="material-symbols-rounded icon-sm">close</span>
+                        </button>
+                    </div>
                 </div>
                 
                 <div id="history-loading" class="p-8 text-center text-slate-400 text-sm hidden flex flex-col items-center gap-2">
@@ -161,7 +147,7 @@
                     ยังไม่มีข้อมูล
                 </div>
                 
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
                     <table class="w-full text-sm text-left">
                         <tbody id="history-list" class="divide-y divide-slate-100"></tbody>
                     </table>
@@ -239,9 +225,8 @@
         // =========================================================================
         // ⚠️ ใส่ URL Google Apps Script ที่นี่ ⚠️
         // =========================================================================
-        const API_URL = "https://script.google.com/macros/s/AKfycbxzquEaxB8LJxUsiy5mrmlT-pFJ3m8B_MhcipZdTrCxK8SZokX2IplkDKpwjncWno_5WQ/exec"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbxMswJGCHo_m4S1SDSdyYysHt8gOUYwxsyX1g_5trbEMJ-kFGDOHsfWDY2tWOwEwwUR4A/exec"; 
         
-        // --- Variables ---
         let savedConfigs = []; let activeId = ""; let savedAppUrl = ""; let isProcessing = false; let html5QrCode = null;
         const inputField = document.getElementById('manual-input'); const saveBtn = document.getElementById('save-btn'); const historyList = document.getElementById('history-list');
 
@@ -285,7 +270,11 @@
             
             if (res.success) {
                 Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 1500 }).fire({ icon: 'success', title: 'บันทึกแล้ว' });
-                inputField.value = ''; loadHistory();
+                inputField.value = ''; 
+                await loadHistory();
+                // ถ้าค้นหาค้างไว้อยู่ ให้กรองใหม่ด้วย
+                const searchTerm = document.getElementById('search-history').value;
+                if(searchTerm) filterHistory();
             } else if (res.duplicate) {
                 Swal.fire({ title: 'ข้อมูลซ้ำ!', text: `${res.code} ถูกบันทึกไปแล้ว`, icon: 'warning', timer: 2500, showConfirmButton: false });
                 inputField.value = '';
@@ -303,10 +292,10 @@
 
             res.history.forEach(item => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 border-b border-slate-100 group";
+                tr.className = "hover:bg-slate-50 border-b border-slate-100 group transition-colors";
                 tr.innerHTML = `
                     <td class="px-5 py-3 align-top">
-                        <div class="font-bold text-slate-800 text-lg break-all cursor-pointer active:text-blue-600 flex items-center gap-2" onclick="showBarcodeModal('${item.code}')">
+                        <div class="code-text font-bold text-slate-800 text-lg break-all cursor-pointer active:text-blue-600 flex items-center gap-2" onclick="showBarcodeModal('${item.code}')">
                             <span class="material-symbols-rounded text-slate-300 icon-sm">qr_code_2</span>
                             ${item.code} 
                         </div>
@@ -323,17 +312,84 @@
                 `;
                 historyList.appendChild(tr);
             });
+            filterHistory(); // กรองซ้ำเผื่อมีคำค้นค้างอยู่
         }
         
-        function formatDate(dateStr) { try { return new Date(dateStr).toLocaleString('th-TH', { hour: '2-digit', minute:'2-digit', day:'numeric', month:'short' }); } catch(e) { return dateStr; } }
+        // 🔍 ฟังก์ชันค้นหา / กรองข้อมูล (ทำงานฝั่ง Client)
+        function filterHistory() {
+            const input = document.getElementById('search-history');
+            const filter = input.value.toLowerCase();
+            const rows = historyList.getElementsByTagName('tr');
+            let hasVisible = false;
 
-        function deleteHistory(row) {
-            Swal.fire({ title: 'ยืนยันลบ?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก' }).then(async (r) => {
-                if(r.isConfirmed) { Swal.showLoading(); await callAPI('deleteHistory', row); Swal.close(); loadHistory(); }
-            });
+            for (let i = 0; i < rows.length; i++) {
+                const codeDiv = rows[i].querySelector('.code-text');
+                if (codeDiv) {
+                    const txtValue = codeDiv.textContent || codeDiv.innerText;
+                    if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                        rows[i].style.display = "";
+                        hasVisible = true;
+                    } else {
+                        rows[i].style.display = "none";
+                    }
+                }
+            }
+            
+            // แสดงสถานะถ้าไม่พบข้อมูล
+            const emptyState = document.getElementById('history-empty');
+            if (!hasVisible && filter !== "") {
+                if(emptyState.classList.contains('hidden')) {
+                     // อาจจะสร้าง tr บอกว่าไม่พบข้อมูลก็ได้ แต่นี่ใช้ empty เดิมไปก่อน
+                }
+            }
         }
 
-        // --- Configs ---
+        function formatDate(dateStr) { try { return new Date(dateStr).toLocaleString('th-TH', { hour: '2-digit', minute:'2-digit', day:'numeric', month:'short' }); } catch(e) { return dateStr; } }
+        function deleteHistory(row) { Swal.fire({ title: 'ยืนยันลบ?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก' }).then(async (r) => { if(r.isConfirmed) { Swal.showLoading(); await callAPI('deleteHistory', row); Swal.close(); loadHistory(); } }); }
+        
+        // --- Camera Logic (ปรับใหม่: ซ่อน/แสดง) ---
+        function playBeep() { const a = document.getElementById('beep-sound'); if(a){ a.currentTime=0; a.play().catch(()=>{}); } }
+        
+        document.getElementById('start-camera-btn').addEventListener('click', () => {
+            const triggerDiv = document.getElementById('camera-trigger');
+            const containerDiv = document.getElementById('camera-container');
+            
+            // UI Toggle
+            triggerDiv.classList.add('hidden');
+            containerDiv.classList.remove('hidden');
+
+            playBeep();
+            
+            // Start Camera
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { 
+                fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0,
+                videoConstraints: { facingMode: "environment", focusMode: "continuous", width: { min: 640, ideal: 1280 }, height: { min: 480, ideal: 720 } }
+            };
+
+            html5QrCode.start({ facingMode: "environment" }, config, 
+                (txt) => { if(!isProcessing) { playBeep(); inputField.value = txt; handleSave(txt); } }, 
+                (err) => {}
+            ).catch(err => { 
+                console.error(err); 
+                Swal.fire('Camera Error', 'ไม่สามารถเปิดกล้องได้', 'error'); 
+                resetCam(); 
+            });
+        });
+
+        document.getElementById('stop-camera-btn').addEventListener('click', () => { if(html5QrCode) html5QrCode.stop().then(resetCam).catch(resetCam); else resetCam(); });
+        
+        function resetCam() { 
+            const triggerDiv = document.getElementById('camera-trigger');
+            const containerDiv = document.getElementById('camera-container');
+            
+            containerDiv.classList.add('hidden'); // ซ่อนกล้อง
+            triggerDiv.classList.remove('hidden'); // แสดงปุ่มเริ่ม
+            
+            const overlay = document.querySelector('.scan-region-highlight'); if(overlay) overlay.remove();
+        }
+
+        // --- Configs & Other (เหมือนเดิม) ---
         async function handleSaveConfig() { 
             const name = document.getElementById('config-name').value; const id = document.getElementById('config-id').value; const idx = document.getElementById('config-select').value;
             if(!name || !id) { Swal.fire('ระบุข้อมูลให้ครบ', '', 'error'); return; }
@@ -341,11 +397,7 @@
             Swal.showLoading(); await callAPI('saveConfig', { configs: savedConfigs, id: id }); Swal.close();
             activeId = id; reloadConfigs(); loadHistory();
         }
-        async function handleDeleteConfig() {
-             const idx = document.getElementById('config-select').value; if(idx === "") return;
-             savedConfigs.splice(idx, 1); activeId = savedConfigs.length ? savedConfigs[0].id : "";
-             await callAPI('saveConfig', { configs: savedConfigs, id: activeId }); reloadConfigs();
-        }
+        async function handleDeleteConfig() { const idx = document.getElementById('config-select').value; if(idx === "") return; savedConfigs.splice(idx, 1); activeId = savedConfigs.length ? savedConfigs[0].id : ""; await callAPI('saveConfig', { configs: savedConfigs, id: activeId }); reloadConfigs(); }
         function reloadConfigs() {
             const sel = document.getElementById('config-select'); sel.innerHTML = '<option value="">-- สร้างใหม่ --</option>';
             const statusBar = document.getElementById('status-bar'); let found = false;
@@ -363,60 +415,14 @@
         }
         async function saveAppUrlSetting() { const url = document.getElementById('app-url-setting').value; await callAPI('saveAppUrl', url); savedAppUrl = url; Swal.fire('Saved', '', 'success'); }
         function openSettings() { const details = document.getElementById('settings-details'); details.open = true; details.scrollIntoView({behavior: "smooth"}); }
-
-        // --- Camera & Sound Logic ---
-        function playBeep() { const a = document.getElementById('beep-sound'); if(a){ a.currentTime=0; a.play().catch(()=>{}); } }
-        
-        // ฟังก์ชันเริ่มกล้อง (ปรับปรุง: แสดง/ซ่อน DIV)
-        document.getElementById('start-camera-btn').addEventListener('click', () => {
-            const scanArea = document.getElementById('camera-scan-area');
-            const startBtn = document.getElementById('start-camera-btn');
-            
-            // เปิด UI
-            startBtn.classList.add('hidden');
-            scanArea.classList.remove('hidden');
-            
-            // เพิ่ม Overlay (ถ้ายังไม่มี)
-            const readerDiv = document.getElementById('reader');
-            if(!document.querySelector('.scan-region-highlight')) {
-                const overlay = document.createElement('div'); overlay.className = 'scan-region-highlight'; readerDiv.appendChild(overlay);
-            }
-
-            playBeep(); 
-
-            html5QrCode = new Html5Qrcode("reader");
-            const config = { 
-                fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0,
-                videoConstraints: { facingMode: "environment", focusMode: "continuous", width: { min: 640, ideal: 1280 }, height: { min: 480, ideal: 720 } }
-            };
-
-            html5QrCode.start({ facingMode: "environment" }, config, 
-                (txt) => { if(!isProcessing) { playBeep(); inputField.value = txt; handleSave(txt); } }, 
-                (err) => {}
-            ).catch(err => { console.error(err); Swal.fire('Camera Error', 'ไม่สามารถเปิดกล้องได้', 'error'); resetCam(); });
-        });
-
-        document.getElementById('stop-camera-btn').addEventListener('click', () => { if(html5QrCode) html5QrCode.stop().then(resetCam).catch(resetCam); else resetCam(); });
-        
-        function resetCam() { 
-            // ปิด UI
-            document.getElementById('camera-scan-area').classList.add('hidden'); 
-            document.getElementById('start-camera-btn').classList.remove('hidden'); 
-            
-            // Clear overlay
-            const overlay = document.querySelector('.scan-region-highlight'); if(overlay) overlay.remove();
-        }
-
         inputField.addEventListener('keydown', (e) => { if(e.key === 'Enter' && inputField.value) { e.preventDefault(); handleSave(inputField.value); } });
         document.getElementById('record-form').addEventListener('submit', (e) => { e.preventDefault(); });
-
         function showBarcodeModal(code) {
             const modal = document.getElementById('barcode-modal'); const svg = document.getElementById('modal-barcode-display'); const qrDiv = document.getElementById('modal-qr-display');
             document.getElementById('modal-code-text').innerText = code; modal.classList.remove('hidden');
             try { svg.style.display = 'block'; qrDiv.style.display = 'none'; qrDiv.innerHTML = ''; JsBarcode(svg, code, { format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false }); } 
             catch (e) { svg.style.display = 'none'; qrDiv.style.display = 'flex'; new QRCode(qrDiv, { text: code, width: 150, height: 150 }); }
         }
-
         function openShareModal() {
             const targetUrl = savedAppUrl || window.location.href;
             Swal.fire({

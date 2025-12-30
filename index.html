@@ -40,7 +40,6 @@
         /* Camera Styles */
         #reader { width: 100%; border-radius: 0.75rem; overflow: hidden; background-color: #000; position: relative; }
         #reader video { object-fit: cover; width: 100% !important; height: 100% !important; border-radius: 0.75rem; }
-        .mirror-mode video { transform: scaleX(-1); }
         
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -111,15 +110,9 @@
                             <div id="reader" class="w-full h-full"></div>
                         </div>
                     </div>
-                    <div class="px-5 pb-5 pt-2 flex gap-3">
-                        <button id="switch-cam-btn" onclick="switchCamera()" class="w-14 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-3 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center border border-slate-700">
-                            <span class="material-symbols-rounded">cameraswitch</span>
-                        </button>
-                        <button id="torch-btn" type="button" onclick="toggleTorch()" class="hidden w-14 bg-slate-800 hover:bg-slate-700 text-yellow-400 font-bold py-3 px-3 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center border border-slate-700">
-                            <span id="torch-icon" class="material-symbols-rounded">flash_on</span>
-                        </button>
-                        <button id="stop-camera-btn" type="button" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
-                            <span class="material-symbols-rounded icon-sm">videocam_off</span> ปิด
+                    <div class="px-5 pb-5 pt-2">
+                        <button id="stop-camera-btn" type="button" class="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+                            <span class="material-symbols-rounded icon-sm">videocam_off</span> ปิดกล้อง
                         </button>
                     </div>
                 </div>
@@ -245,8 +238,8 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbxMswJGCHo_m4S1SDSdyYysHt8gOUYwxsyX1g_5trbEMJ-kFGDOHsfWDY2tWOwEwwUR4A/exec"; 
         
         let savedConfigs = []; let activeId = ""; let savedAppUrl = ""; let isProcessing = false; 
-        let html5QrCode = null; let isTorchOn = false; let currentFacingMode = "environment";
-        let currentHistoryData = []; // เก็บข้อมูลประวัติทั้งหมด
+        let html5QrCode = null; 
+        let currentHistoryData = []; 
 
         const inputField = document.getElementById('manual-input'); const saveBtn = document.getElementById('save-btn'); const historyList = document.getElementById('history-list');
 
@@ -314,8 +307,6 @@
             
             document.getElementById('history-loading').classList.add('hidden'); 
             document.getElementById('total-count').innerText = res.total || 0;
-            
-            // เก็บข้อมูลลงตัวแปร Global
             currentHistoryData = res.history || [];
 
             if(!currentHistoryData || currentHistoryData.length === 0) { 
@@ -366,24 +357,18 @@
         }
 
         // --- Copy Functions ---
-        
-        // คัดลอกทีละรายการ
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
                 Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 1000 }).fire({ icon: 'success', title: 'คัดลอกแล้ว' });
             }).catch(err => { console.error('Copy failed', err); });
         }
 
-        // คัดลอกทั้งหมด (Copy All)
         function copyAllHistory() {
             if (!currentHistoryData || currentHistoryData.length === 0) {
                 Swal.fire({ toast: true, position: 'top', title: 'ไม่มีข้อมูลให้คัดลอก', icon: 'info', showConfirmButton: false, timer: 1500 });
                 return;
             }
-
-            // ดึงเฉพาะรหัสออกมา และรวมด้วยการขึ้นบรรทัดใหม่
             const allCodes = currentHistoryData.map(item => item.code).join('\n');
-
             navigator.clipboard.writeText(allCodes).then(() => {
                 Swal.fire({
                     title: 'คัดลอกทั้งหมดแล้ว!',
@@ -401,34 +386,23 @@
         function deleteHistory(row) { Swal.fire({ title: 'ยืนยันลบ?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก' }).then(async (r) => { if(r.isConfirmed) { Swal.showLoading(); await callAPI('deleteHistory', row); Swal.close(); loadHistory(); } }); }
         function playBeep() { const a = document.getElementById('beep-sound'); if(a){ a.currentTime=0; a.play().catch(()=>{}); } }
         
-        // --- Camera & Tools ---
-        function startScanner(facingMode) {
+        // --- Camera Logic (Simplified) ---
+        function startScanner() {
             html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0, videoConstraints: { facingMode: facingMode, focusMode: "continuous", width: { min: 640, ideal: 1280 }, height: { min: 480, ideal: 720 } } };
-            const readerEl = document.getElementById('reader');
-            if(facingMode === "user") readerEl.classList.add("mirror-mode"); else readerEl.classList.remove("mirror-mode");
-            html5QrCode.start({ facingMode: facingMode }, config, (txt) => { if(!isProcessing) { playBeep(); inputField.value = txt; handleSave(txt); } }, (err) => {})
-            .then(() => { if(facingMode === "environment") document.getElementById('torch-btn').classList.remove('hidden'); else document.getElementById('torch-btn').classList.add('hidden'); })
+            // บังคับใช้กล้องหลัง (environment) โดยตัดฟังก์ชันสลับกล้องออก
+            const config = { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0, videoConstraints: { facingMode: "environment", focusMode: "continuous", width: { min: 640, ideal: 1280 }, height: { min: 480, ideal: 720 } } };
+            
+            html5QrCode.start({ facingMode: "environment" }, config, (txt) => { if(!isProcessing) { playBeep(); inputField.value = txt; handleSave(txt); } }, (err) => {})
             .catch(err => { console.error(err); Swal.fire('Camera Error', 'ไม่สามารถเปิดกล้องได้', 'error'); resetCam(); });
         }
-        document.getElementById('start-camera-btn').addEventListener('click', () => { document.getElementById('camera-trigger').classList.add('hidden'); document.getElementById('camera-container').classList.remove('hidden'); playBeep(); startScanner(currentFacingMode); });
+        
+        document.getElementById('start-camera-btn').addEventListener('click', () => { document.getElementById('camera-trigger').classList.add('hidden'); document.getElementById('camera-container').classList.remove('hidden'); playBeep(); startScanner(); });
         document.getElementById('stop-camera-btn').addEventListener('click', () => { stopScanner(); });
         function stopScanner() { if(html5QrCode) html5QrCode.stop().then(resetCam).catch(resetCam); else resetCam(); }
         function resetCam() { 
-            document.getElementById('camera-container').classList.add('hidden'); document.getElementById('camera-trigger').classList.remove('hidden'); document.getElementById('torch-btn').classList.add('hidden'); isTorchOn = false; 
-            const icon = document.getElementById('torch-icon'); icon.innerText = "flash_on"; icon.parentElement.classList.remove("bg-yellow-400", "text-black"); icon.parentElement.classList.add("bg-slate-800", "text-yellow-400");
+            document.getElementById('camera-container').classList.add('hidden'); document.getElementById('camera-trigger').classList.remove('hidden'); 
         }
-        function switchCamera() { if(html5QrCode) { html5QrCode.stop().then(() => { currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment"; startScanner(currentFacingMode); }).catch(console.error); } }
-        async function toggleTorch() {
-             if(html5QrCode && currentFacingMode === "environment") {
-                 isTorchOn = !isTorchOn;
-                 const icon = document.getElementById('torch-icon');
-                 try { await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isTorchOn }] });
-                     if(isTorchOn) { icon.innerText = "flash_off"; icon.parentElement.classList.add("bg-yellow-400", "text-black"); icon.parentElement.classList.remove("bg-slate-800", "text-yellow-400"); } 
-                     else { icon.innerText = "flash_on"; icon.parentElement.classList.remove("bg-yellow-400", "text-black"); icon.parentElement.classList.add("bg-slate-800", "text-yellow-400"); }
-                 } catch(err) { isTorchOn = !isTorchOn; Swal.fire({ title: 'เปิดไฟไม่ได้', text: 'อุปกรณ์ไม่รองรับ', icon: 'warning', timer: 2000, showConfirmButton: false }); }
-             }
-        }
+        
         document.getElementById('record-form').addEventListener('submit', (e) => { e.preventDefault(); handleSave(inputField.value); });
         async function handleSaveConfig() { const name = document.getElementById('config-name').value; const id = document.getElementById('config-id').value; const idx = document.getElementById('config-select').value; if(!name || !id) { Swal.fire('ระบุข้อมูลให้ครบ', '', 'error'); return; } if(idx !== "") savedConfigs[idx] = {name, id}; else savedConfigs.push({name, id}); Swal.showLoading(); await callAPI('saveConfig', { configs: savedConfigs, id: id }); Swal.close(); activeId = id; reloadConfigs(); loadHistory(); }
         async function handleDeleteConfig() { const idx = document.getElementById('config-select').value; if(idx === "") return; savedConfigs.splice(idx, 1); activeId = savedConfigs.length ? savedConfigs[0].id : ""; await callAPI('saveConfig', { configs: savedConfigs, id: activeId }); reloadConfigs(); }
@@ -441,13 +415,9 @@
             const modal = document.getElementById('barcode-modal'); 
             const svg = document.getElementById('modal-barcode-display'); 
             const qrDiv = document.getElementById('modal-qr-display'); 
-            
             document.getElementById('modal-code-text').innerText = code; 
-            
-            // ตั้งค่า onclick ให้ปุ่ม copy ใน modal เพื่อ copy รหัสปัจจุบัน
             const copyBtn = document.getElementById('modal-copy-btn');
             copyBtn.onclick = function() { copyToClipboard(code); };
-
             modal.classList.remove('hidden'); 
             try { 
                 svg.style.display = 'block'; qrDiv.style.display = 'none'; qrDiv.innerHTML = ''; 

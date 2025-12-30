@@ -22,7 +22,8 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script> 
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>-->
     
     <!-- Library ทั้งหมดให้เป็น Internal (ภายในเครื่อง) -->
     <script src="./tailwindcss.js"></script>
@@ -30,6 +31,7 @@
     <script src="./html5-qrcode.min.js"></script>
     <script src="./qrcode.min.js"></script>
     <script src="./JsBarcode.all.min.js"></script>
+    <script src="./html2canvas.min.js"></script>
 
     <style>
         body { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
@@ -210,23 +212,33 @@
     </main>
 
     <div id="barcode-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity" style="touch-action: none;">
-        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center transform scale-100 relative">
-            <button onclick="document.getElementById('barcode-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+        <div class="bg-slate-100 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center transform scale-100 relative max-h-[95vh] overflow-y-auto">
+            <button onclick="document.getElementById('barcode-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 z-10">
                 <span class="material-symbols-rounded">close</span>
             </button>
             <h3 class="text-lg font-bold text-slate-800 mb-4">Barcode View</h3>
-            <div class="flex justify-center mb-4 overflow-hidden bg-white p-2 rounded border border-slate-100">
-                <svg id="modal-barcode-display"></svg>
-            </div>
-            <div id="modal-qr-display" class="flex justify-center mb-4 hidden"></div>
-            <p id="modal-code-text" class="text-2xl font-mono font-bold text-blue-600 mb-1 tracking-wide select-all"></p>
-            <p id="modal-code-time" class="text-sm text-slate-400 mb-6"></p>
             
-            <button id="modal-copy-btn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold active:bg-slate-300 mb-3 flex items-center justify-center gap-2">
-                <span class="material-symbols-rounded icon-sm">content_copy</span> คัดลอกรหัส + เวลา
-            </button>
+            <div id="sticker-card" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-4 flex flex-col items-center">
+                <div id="modal-qr-display" class="flex justify-center mb-5"></div>
+                
+                <div class="flex justify-center mb-3 overflow-hidden w-full" id="barcode-container">
+                    <svg id="modal-barcode-display" class="w-full"></svg>
+                </div>
+                
+                <p id="modal-code-text" class="text-2xl font-mono font-bold text-blue-600 mb-1 tracking-wide break-all"></p>
+                <p id="modal-code-time" class="text-sm text-slate-400"></p>
+                <p class="text-[10px] text-slate-300 mt-2">© PAING NON</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                 <button onclick="saveModalAsImage()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold active:bg-indigo-800 flex items-center justify-center gap-2 shadow-sm">
+                    <span class="material-symbols-rounded icon-sm">image</span> บันทึกรูป
+                </button>
+                <button id="modal-copy-btn" class="bg-white hover:bg-slate-50 text-slate-700 py-3 rounded-xl font-bold border border-slate-200 active:bg-slate-100 flex items-center justify-center gap-2 shadow-sm">
+                    <span class="material-symbols-rounded icon-sm">content_copy</span> คัดลอก
+                </button>
+            </div>
 
-            <button onclick="document.getElementById('barcode-modal').classList.add('hidden')" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold active:bg-slate-700">ปิด</button>
+            <button onclick="document.getElementById('barcode-modal').classList.add('hidden')" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold active:bg-slate-700">ปิดหน้าต่าง</button>
         </div>
     </div>
 
@@ -365,7 +377,7 @@
         function copyToClipboard(code, time) {
             let textToCopy = code;
             if (time) {
-                // รูปแบบ: Code [Tab] Date Time (สำหรับการวางใน Excel)
+                // รูปแบบ: Code [Tab] Date Time
                 textToCopy = `${code}\t${formatDate(time)}`; 
             }
 
@@ -379,9 +391,7 @@
                 Swal.fire({ toast: true, position: 'top', title: 'ไม่มีข้อมูลให้คัดลอก', icon: 'info', showConfirmButton: false, timer: 1500 });
                 return;
             }
-            // รวมข้อมูลทั้งหมด: Code [Tab] Date Time [New Line]
             const allData = currentHistoryData.map(item => `${item.code}\t${formatDate(item.time)}`).join('\n');
-            
             navigator.clipboard.writeText(allData).then(() => {
                 Swal.fire({
                     title: 'คัดลอกทั้งหมดแล้ว!',
@@ -400,24 +410,15 @@
             try {
                 const d = new Date(dateStr);
                 if (isNaN(d.getTime())) return dateStr;
-
-                // ดึงค่า วัน, เดือน, ปี, เวลา
                 const day = String(d.getDate()).padStart(2, '0');
                 const month = String(d.getMonth() + 1).padStart(2, '0');
-                
-                // คำนวณปี พ.ศ. เอาเฉพาะ 2 หลักท้าย (เช่น 2568 -> 68)
                 const year = d.getFullYear();
                 const thaiYear = (year + 543).toString().slice(-2);
-                
                 const hours = String(d.getHours()).padStart(2, '0');
                 const minutes = String(d.getMinutes()).padStart(2, '0');
                 const seconds = String(d.getSeconds()).padStart(2, '0');
-
-                // คืนค่ารูปแบบ: 31/12/68 14:30:45
                 return `${day}/${month}/${thaiYear} ${hours}:${minutes}:${seconds}`;
-            } catch(e) { 
-                return dateStr; 
-            } 
+            } catch(e) { return dateStr; } 
         }
         
         function deleteHistory(row) { Swal.fire({ title: 'ยืนยันลบ?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก' }).then(async (r) => { if(r.isConfirmed) { Swal.showLoading(); await callAPI('deleteHistory', row); Swal.close(); loadHistory(); } }); }
@@ -446,25 +447,56 @@
         async function saveAppUrlSetting() { const url = document.getElementById('app-url-setting').value; await callAPI('saveAppUrl', url); savedAppUrl = url; Swal.fire('Saved', '', 'success'); }
         function openSettings() { const details = document.getElementById('settings-details'); details.open = true; details.scrollIntoView({behavior: "smooth"}); }
         
+        // --- Modal & Image Logic ---
         function showBarcodeModal(code, time) { 
             const modal = document.getElementById('barcode-modal'); 
             const svg = document.getElementById('modal-barcode-display'); 
             const qrDiv = document.getElementById('modal-qr-display'); 
+            const barcodeContainer = document.getElementById('barcode-container');
             
             document.getElementById('modal-code-text').innerText = code; 
-            document.getElementById('modal-code-time').innerText = formatDate(time); // ใช้ฟอร์แมตใหม่
+            document.getElementById('modal-code-time').innerText = formatDate(time); 
 
             const copyBtn = document.getElementById('modal-copy-btn');
             copyBtn.onclick = function() { copyToClipboard(code, time); }; 
             
             modal.classList.remove('hidden'); 
-            try { 
-                svg.style.display = 'block'; qrDiv.style.display = 'none'; qrDiv.innerHTML = ''; 
+            
+            // 1. QR Code
+            qrDiv.innerHTML = '';
+            new QRCode(qrDiv, { text: code, width: 160, height: 160 }); 
+            
+            // 2. Barcode
+            try {
+                barcodeContainer.classList.remove('hidden');
                 JsBarcode(svg, code, { format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false }); 
-            } catch (e) { 
-                svg.style.display = 'none'; qrDiv.style.display = 'flex'; 
-                new QRCode(qrDiv, { text: code, width: 150, height: 150 }); 
-            } 
+            } catch (e) {
+                barcodeContainer.classList.add('hidden');
+            }
+        }
+
+        // Save Image Function
+        function saveModalAsImage() {
+            const element = document.getElementById('sticker-card');
+            const code = document.getElementById('modal-code-text').innerText;
+            
+            // Show loading
+            Swal.fire({
+                title: 'กำลังบันทึกภาพ...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            html2canvas(element, { scale: 3, backgroundColor: "#ffffff", useCORS: true }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `CODE-${code}.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+                Swal.close();
+            }).catch(err => {
+                console.error(err);
+                Swal.fire('Error', 'บันทึกรูปภาพไม่สำเร็จ', 'error');
+            });
         }
 
         function openShareModal() { const targetUrl = savedAppUrl || window.location.href; Swal.fire({ title: 'Share App', html: `<div class="flex flex-col items-center gap-4"><div id="share-qrcode" class="bg-white p-2 rounded border border-slate-100"></div><input type="text" value="${targetUrl}" readonly class="w-full text-center text-sm border p-2 rounded bg-slate-50 text-slate-500"></div>`, showConfirmButton: true, confirmButtonText: 'Copy Link', confirmButtonColor: '#1e293b', showCloseButton: true, didOpen: () => { document.getElementById("share-qrcode").innerHTML = ""; new QRCode(document.getElementById("share-qrcode"), { text: targetUrl, width: 150, height: 150, colorDark: "#1e293b" }); } }).then((r) => { if(r.isConfirmed) { navigator.clipboard.writeText(targetUrl); Swal.fire({title: 'Copied', icon: 'success', toast: true, position: 'top', showConfirmButton: false, timer: 1500}); } }); }

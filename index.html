@@ -203,8 +203,8 @@
             </div>
             
             <footer class="mt-8 text-center text-xs text-slate-400 pb-8 flex flex-col gap-1">
-                <span>Scanner Pro PWA</span>
-                <span class="opacity-50">GitHub Hosted</span>
+                <span class="font-bold text-slate-500 text-sm">© PAING NON</span>
+                <span class="opacity-50">Scanner Pro PWA</span>
             </footer>
         </div>
     </main>
@@ -219,10 +219,11 @@
                 <svg id="modal-barcode-display"></svg>
             </div>
             <div id="modal-qr-display" class="flex justify-center mb-4 hidden"></div>
-            <p id="modal-code-text" class="text-2xl font-mono font-bold text-blue-600 mb-6 tracking-wide select-all"></p>
+            <p id="modal-code-text" class="text-2xl font-mono font-bold text-blue-600 mb-1 tracking-wide select-all"></p>
+            <p id="modal-code-time" class="text-sm text-slate-400 mb-6"></p>
             
             <button id="modal-copy-btn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold active:bg-slate-300 mb-3 flex items-center justify-center gap-2">
-                <span class="material-symbols-rounded icon-sm">content_copy</span> คัดลอกรหัส
+                <span class="material-symbols-rounded icon-sm">content_copy</span> คัดลอกรหัส + เวลา
             </button>
 
             <button onclick="document.getElementById('barcode-modal').classList.add('hidden')" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold active:bg-slate-700">ปิด</button>
@@ -319,17 +320,21 @@
                 tr.className = "hover:bg-slate-50 border-b border-slate-100 group transition-colors";
                 tr.innerHTML = `
                     <td class="px-5 py-3 align-top">
-                        <div class="code-text font-bold text-slate-800 text-lg break-all cursor-pointer active:text-blue-600 flex items-center gap-2" onclick="showBarcodeModal('${item.code}')">
+                        <div class="code-text font-bold text-slate-800 text-lg break-all cursor-pointer active:text-blue-600 flex items-center gap-2" onclick="showBarcodeModal('${item.code}', '${item.time}')">
                             <span class="material-symbols-rounded text-slate-300 icon-sm">qr_code_2</span>
                             ${item.code} 
                         </div>
-                        <div class="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
-                             <span class="flex items-center gap-1"><span class="material-symbols-rounded text-[10px]">schedule</span> ${formatDate(item.time)}</span>
-                             <span class="flex items-center gap-1 text-slate-300">| ${item.device}</span>
+                        <div class="text-xs text-slate-500 mt-1 flex items-center flex-wrap gap-x-3 gap-y-1">
+                             <span class="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-medium">
+                                <span class="material-symbols-rounded text-[14px]">calendar_today</span> ${formatDate(item.time)}
+                             </span>
+                             <span class="flex items-center gap-1 text-slate-400 text-[10px] uppercase tracking-wide">
+                                <span class="material-symbols-rounded text-[14px]">smartphone</span> ${item.device}
+                             </span>
                         </div>
                     </td>
                     <td class="px-2 py-3 text-right align-top w-20 whitespace-nowrap">
-                        <button onclick="copyToClipboard('${item.code}')" class="text-slate-400 p-2 rounded-full hover:bg-blue-50 hover:text-blue-600 transition-colors mr-1">
+                        <button onclick="copyToClipboard('${item.code}', '${item.time}')" class="text-slate-400 p-2 rounded-full hover:bg-blue-50 hover:text-blue-600 transition-colors mr-1">
                             <span class="material-symbols-rounded icon-sm">content_copy</span>
                         </button>
                         <button onclick="deleteHistory('${item.row}')" class="text-slate-300 p-2 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors">
@@ -356,10 +361,16 @@
             }
         }
 
-        // --- Copy Functions ---
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 1000 }).fire({ icon: 'success', title: 'คัดลอกแล้ว' });
+        // --- Copy Functions (Updated) ---
+        function copyToClipboard(code, time) {
+            let textToCopy = code;
+            if (time) {
+                // รูปแบบ: Code [Tab] Date Time (เหมาะสำหรับวางใน Excel จะแยกคอลัมน์ให้อัตโนมัติ)
+                textToCopy = `${code}\t${formatDate(time)}`; 
+            }
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 1000 }).fire({ icon: 'success', title: 'คัดลอกข้อมูลแล้ว' });
             }).catch(err => { console.error('Copy failed', err); });
         }
 
@@ -368,11 +379,14 @@
                 Swal.fire({ toast: true, position: 'top', title: 'ไม่มีข้อมูลให้คัดลอก', icon: 'info', showConfirmButton: false, timer: 1500 });
                 return;
             }
-            const allCodes = currentHistoryData.map(item => item.code).join('\n');
-            navigator.clipboard.writeText(allCodes).then(() => {
+            
+            // รวมข้อมูลทั้งหมด: Code [Tab] Date Time [New Line]
+            const allData = currentHistoryData.map(item => `${item.code}\t${formatDate(item.time)}`).join('\n');
+            
+            navigator.clipboard.writeText(allData).then(() => {
                 Swal.fire({
                     title: 'คัดลอกทั้งหมดแล้ว!',
-                    text: `จำนวน ${currentHistoryData.length} รายการ`,
+                    text: `ข้อมูล ${currentHistoryData.length} รายการ (พร้อมวันเวลา)`,
                     icon: 'success',
                     timer: 1500,
                     showConfirmButton: false
@@ -382,16 +396,22 @@
             });
         }
 
-        function formatDate(dateStr) { try { return new Date(dateStr).toLocaleString('th-TH', { hour: '2-digit', minute:'2-digit', day:'numeric', month:'short' }); } catch(e) { return dateStr; } }
+        function formatDate(dateStr) { 
+            try { 
+                return new Date(dateStr).toLocaleString('th-TH', { 
+                    day: '2-digit', month: '2-digit', year: '2-digit', 
+                    hour: '2-digit', minute: '2-digit', second: '2-digit' 
+                }); 
+            } catch(e) { return dateStr; } 
+        }
+        
         function deleteHistory(row) { Swal.fire({ title: 'ยืนยันลบ?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก' }).then(async (r) => { if(r.isConfirmed) { Swal.showLoading(); await callAPI('deleteHistory', row); Swal.close(); loadHistory(); } }); }
         function playBeep() { const a = document.getElementById('beep-sound'); if(a){ a.currentTime=0; a.play().catch(()=>{}); } }
         
-        // --- Camera Logic (Simplified) ---
+        // --- Camera Logic ---
         function startScanner() {
             html5QrCode = new Html5Qrcode("reader");
-            // บังคับใช้กล้องหลัง (environment) โดยตัดฟังก์ชันสลับกล้องออก
             const config = { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0, videoConstraints: { facingMode: "environment", focusMode: "continuous", width: { min: 640, ideal: 1280 }, height: { min: 480, ideal: 720 } } };
-            
             html5QrCode.start({ facingMode: "environment" }, config, (txt) => { if(!isProcessing) { playBeep(); inputField.value = txt; handleSave(txt); } }, (err) => {})
             .catch(err => { console.error(err); Swal.fire('Camera Error', 'ไม่สามารถเปิดกล้องได้', 'error'); resetCam(); });
         }
@@ -411,13 +431,17 @@
         async function saveAppUrlSetting() { const url = document.getElementById('app-url-setting').value; await callAPI('saveAppUrl', url); savedAppUrl = url; Swal.fire('Saved', '', 'success'); }
         function openSettings() { const details = document.getElementById('settings-details'); details.open = true; details.scrollIntoView({behavior: "smooth"}); }
         
-        function showBarcodeModal(code) { 
+        function showBarcodeModal(code, time) { 
             const modal = document.getElementById('barcode-modal'); 
             const svg = document.getElementById('modal-barcode-display'); 
             const qrDiv = document.getElementById('modal-qr-display'); 
+            
             document.getElementById('modal-code-text').innerText = code; 
+            document.getElementById('modal-code-time').innerText = formatDate(time); // Show time in modal
+
             const copyBtn = document.getElementById('modal-copy-btn');
-            copyBtn.onclick = function() { copyToClipboard(code); };
+            copyBtn.onclick = function() { copyToClipboard(code, time); }; // Pass time to copy function
+            
             modal.classList.remove('hidden'); 
             try { 
                 svg.style.display = 'block'; qrDiv.style.display = 'none'; qrDiv.innerHTML = ''; 
